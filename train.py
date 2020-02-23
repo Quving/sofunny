@@ -7,6 +7,9 @@ from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 
+placeholder = 'xxxxx'
+num_words = 5000
+
 
 def get_trainingdata():
     with open("data/task-1/train.csv", "r") as file:
@@ -28,7 +31,7 @@ def convert_data_to_basic(data):
     def extract_woi(sentence):
         p = re.compile("<(.*)/>")
         result = p.search(sentence)
-        sentence = sentence.replace(result.group(0), "xxxxx")
+        sentence = sentence.replace(result.group(0), placeholder)
         return sentence.lower(), result.group(1).lower()
 
     lemmatizer = WordNetLemmatizer()
@@ -69,13 +72,13 @@ def convert_to_trainingdata_for_lstm(sentences, woi1, woi2, grades):
     sentences_train = []
     grades_train = []
     for s, w1, w2, g in zip(sentences, woi1, woi2, grades):
-        sentences_train.append(s.replace("xxxxx", w1))
-        sentences_train.append(s.replace("xxxxx", w2))
+        sentences_train.append(s.replace(placeholder, w1))
+        sentences_train.append(s.replace(placeholder, w2))
         grades_train.append(0.0)
         grades_train.append(g)
 
     # Tokenize the training sentences according to its frequency.
-    tokenizer = Tokenizer(num_words=50000, split=' ')
+    tokenizer = Tokenizer(num_words=num_words, split=' ')
     tokenizer.fit_on_texts(sentences)
     # print(tokenizer.word_index)  # To see the dicstionary
     # print(tokenizer.document_count)  # To see the dicstionary
