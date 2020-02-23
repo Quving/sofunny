@@ -1,7 +1,8 @@
 import csv
 import re
 
-import nltk
+from keras.preprocessing.sequence import pad_sequences
+from keras.preprocessing.text import Tokenizer
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
@@ -14,10 +15,15 @@ def get_trainingdata():
         return list(csv_reader)
 
 
-def preprocess_data(data):
-    nltk.download('stopwords')
-    nltk.download('punkt')
-    nltk.download('wordnet')
+def convert_data_to_basic(data):
+    """
+    Convert the dataset into a basic form. Using 'xxxxx' as placeholder for the word of interest.
+    Args:
+        data:
+
+    Returns:
+        sentences, woi1, woi2, grades
+    """
 
     def extract_woi(sentence):
         p = re.compile("<(.*)/>")
@@ -27,7 +33,7 @@ def preprocess_data(data):
 
     lemmatizer = WordNetLemmatizer()
     stop_words = set(stopwords.words('english'))
-    x_train, y_train = [], []
+    sentences, woi1, woi2, grades = [], [], [], []
     for data_point in data:
         original_raw = data_point[1]
         original, woi = extract_woi(original_raw)
@@ -38,12 +44,54 @@ def preprocess_data(data):
         # Remove stopwords and apply stemming/lemmatizing
         word_tokens = word_tokenize(original)
         filtered_sentence = [lemmatizer.lemmatize(w) for w in word_tokens if not w in stop_words]
+        sentences.append(" ".join(filtered_sentence))
+        woi1.append(woi)
+        woi2.append(data_point[2])
+        grades.append(data_point[4])
 
-        print(original)
-        print(filtered_sentence)
-        print(woi)
+    return sentences, woi1, woi2, grades
+
+
+def convert_to_trainingdata_for_lstm(sentences, woi1, woi2, grades):
+    """
+    Converts to a trainable dataformat for lstms where x is an array of indices and y is the grade.
+    Args:
+        sentences:
+        woi1:
+        woi2:
+        grades:
+
+    Returns:
+
+    """
+
+    # Fill placeholders in sentences
+    sentences_train = []
+    grades_train = []
+    for s, w1, w2, g in zip(sentences, woi1, woi2, grades):
+        sentences_train.append(s.replace("xxxxx", w1))
+        sentences_train.append(s.replace("xxxxx", w2))
+        grades_train.append(0.0)
+        grades_train.append(g)
+
+    # Tokenize the training sentences according to its frequency.
+    tokenizer = Tokenizer(num_words=50000, split=' ')
+    tokenizer.fit_on_texts(sentences)
+    # print(tokenizer.word_index)  # To see the dicstionary
+    # print(tokenizer.document_count)  # To see the dicstionary
+    x_train = tokenizer.texts_to_sequences(sentences)
+
+    # Left pad the training sequences.
+    x_train = pad_sequences(x_train)
+    y_train = grades_train
+
+    return x_train, y_train
 
 
 if __name__ == '__main__':
     data = get_trainingdata()
-    data = preprocess_data(data[:5])
+    sentences, woi1, woi2, grades = convert_data_to_basic(data)
+    x_train, y_train = convert_to_trainingdata_for_lstm(sentences=sentences,
+                                                        woi1=woi1,
+                                                        woi2=woi2,
+                                                        grades=grades)
