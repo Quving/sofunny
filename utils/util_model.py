@@ -26,7 +26,7 @@ def export_model(model, modelname):
     model.save('{}.h5'.format(filename))
 
 
-def load_model_from_file(modelname):
+def import_model(modelname):
     """
     Local model from local directory.
     Args:
