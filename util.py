@@ -12,6 +12,22 @@ placeholder = 'xxxxx'
 num_words = 10000
 
 
+def split_dataset(x_data, y_data, ratio):
+    """
+    Split a given dataset into a training and validation set with a given ratio.
+    Args:
+        x_data:
+        y_data:
+        ratio: 0.0 - 1.0 indicates the percentage of trainingset that should be kept.
+        0.8 means 80% trainingset and 20 validation set.
+
+    Returns:
+    """
+    assert ratio <= 1.0
+    index = int(len(x_data) * ratio)
+    return x_data[:index], y_data[:index], x_data[index:], y_data[index:]
+
+
 def get_trainingdata(filename):
     """
     Load local training data from csv.
@@ -98,7 +114,7 @@ def convert_to_trainingdata_for_lstm(sentences, woi1, woi2, grades):
     return x_train, y_train
 
 
-def get_trainingdata_for_lstm():
+def get_dataset_for_lstm():
     trainset = 'data/task-1/train.csv'
     validationset = 'data/task-1/dev.csv'
 
@@ -112,4 +128,4 @@ def get_trainingdata_for_lstm():
                                                         woi2=woi2,
                                                         grades=grades)
 
-    return x_train, y_train
+    return split_dataset(x_data=x_train, y_data=y_train, ratio=0.8)

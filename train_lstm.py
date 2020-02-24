@@ -6,7 +6,7 @@ from keras.layers import Embedding
 from keras.layers import LSTM
 from keras.models import Sequential
 
-from util import get_trainingdata_for_lstm
+from util import get_dataset_for_lstm
 
 
 def train_lstm_model(x_train, y_train, x_test, y_test):
@@ -37,8 +37,7 @@ def train_lstm_model(x_train, y_train, x_test, y_test):
 
 
 if __name__ == '__main__':
-    x_train, y_train = get_trainingdata_for_lstm()
-    x_test, y_test = [], []
+    x_train, y_train, x_test, y_test = get_dataset_for_lstm()
     # Split to train and validation set.
     print(x_train[0], y_train[0])
     train_lstm_model(
