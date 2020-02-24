@@ -28,7 +28,7 @@ def split_dataset(x_data, y_data, ratio):
     return x_data[:index], y_data[:index], x_data[index:], y_data[index:]
 
 
-def get_trainingdata(filename):
+def load_raw_dataset(filename):
     """
     Load local training data from csv.
     Returns:
@@ -119,8 +119,8 @@ def get_dataset_for_lstm():
     validationset = 'data/task-1/dev.csv'
 
     # Trainingset
-    dataset_train = get_trainingdata(filename=trainset)
-    dataset_val = get_trainingdata(filename=validationset)
+    dataset_train = load_raw_dataset(filename=trainset)
+    dataset_val = load_raw_dataset(filename=validationset)
     dataset = dataset_train + dataset_val
     sentences, woi1, woi2, grades = convert_data_to_basic(dataset)
     x_train, y_train = convert_to_trainingdata_for_lstm(sentences=sentences,

@@ -1,21 +1,20 @@
 from __future__ import print_function
 
-import os
-
 import keras.optimizers as Optimizers
 from keras.layers import Dense
 from keras.layers import Embedding
 from keras.layers import LSTM
 from keras.models import Sequential
 
-from util import get_dataset_for_lstm
+from utils.util_dataset import get_dataset_for_lstm
+from utils.util_model import export_model
 
 
 def train_lstm_model(x_train, y_train, x_test, y_test):
     # Parameters
     embed_dim = len(x_train[0])
     batch_size = 32
-    epochs = 50
+    epochs = 1
     max_features = 10000
 
     # Model
@@ -35,32 +34,12 @@ def train_lstm_model(x_train, y_train, x_test, y_test):
 
     print('Test score:', score)
     print('Test accuracy:', acc)
-    export_model(model=model, filename='lstm_v1')
-
-
-def export_model(model, filename):
-    """
-    Saves the current top-model to local file.
-    :param model:
-    :param filename:
-    :return:
-    """
-    directory = 'models'
-    filename = os.path.join(directory, filename)
-
-    print("Persist model completely in '{}'.".format(filename))
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    with open('{}.json'.format(filename), 'w') as outfile:
-        outfile.write(model.to_json(sort_keys=True, indent=4, separators=(',', ': ')))
-
-    # Save weights
-    model.save('{}.h5'.format(filename))
+    export_model(model=model, modelname='lstm_v1')
 
 
 if __name__ == '__main__':
     x_train, y_train, x_test, y_test = get_dataset_for_lstm()
-    print(x_train[0], y_train[0])
+    print(len(x_train), len(y_train))
     train_lstm_model(
         x_train=x_train,
         y_train=y_train,
