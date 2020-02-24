@@ -1,6 +1,7 @@
 import csv
 import re
 
+import numpy as np
 from keras.preprocessing.sequence import pad_sequences
 from keras.preprocessing.text import Tokenizer
 from nltk.corpus import stopwords
@@ -8,11 +9,16 @@ from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 
 placeholder = 'xxxxx'
-num_words = 5000
+num_words = 10000
 
 
-def get_trainingdata():
-    with open("data/task-1/train.csv", "r") as file:
+def get_trainingdata(filename):
+    """
+    Load local training data from csv.
+    Returns:
+
+    """
+    with open(filename, "r") as file:
         csv_reader = csv.reader(file, delimiter=",", )
         next(csv_reader)
         return list(csv_reader)
@@ -74,27 +80,36 @@ def convert_to_trainingdata_for_lstm(sentences, woi1, woi2, grades):
     for s, w1, w2, g in zip(sentences, woi1, woi2, grades):
         sentences_train.append(s.replace(placeholder, w1))
         sentences_train.append(s.replace(placeholder, w2))
-        grades_train.append(0.0)
-        grades_train.append(g)
+        grades_train.append([0.0])
+        grades_train.append([float(g)])
 
     # Tokenize the training sentences according to its frequency.
     tokenizer = Tokenizer(num_words=num_words, split=' ')
-    tokenizer.fit_on_texts(sentences)
+    tokenizer.fit_on_texts(sentences_train)
     # print(tokenizer.word_index)  # To see the dicstionary
     # print(tokenizer.document_count)  # To see the dicstionary
-    x_train = tokenizer.texts_to_sequences(sentences)
+    x_train = tokenizer.texts_to_sequences(sentences_train)
 
     # Left pad the training sequences.
     x_train = pad_sequences(x_train)
-    y_train = grades_train
+    y_train = np.asarray(grades_train)
 
+    assert len(x_train) == len(y_train)
     return x_train, y_train
 
 
-if __name__ == '__main__':
-    data = get_trainingdata()
-    sentences, woi1, woi2, grades = convert_data_to_basic(data)
+def get_trainingdata_for_lstm():
+    trainset = 'data/task-1/train.csv'
+    validationset = 'data/task-1/dev.csv'
+
+    # Trainingset
+    dataset_train = get_trainingdata(filename=trainset)
+    dataset_val = get_trainingdata(filename=validationset)
+    dataset = dataset_train + dataset_val
+    sentences, woi1, woi2, grades = convert_data_to_basic(dataset)
     x_train, y_train = convert_to_trainingdata_for_lstm(sentences=sentences,
                                                         woi1=woi1,
                                                         woi2=woi2,
                                                         grades=grades)
+
+    return x_train, y_train
