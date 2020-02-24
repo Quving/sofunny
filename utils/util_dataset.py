@@ -77,6 +77,51 @@ def convert_data_to_basic(data):
     return sentences, woi1, woi2, grades
 
 
+def convert_to_trainingdata_for_fcc(sentences, woi1, woi2, grades):
+    """
+    Converts to a trainable dataformat for lstms where x is an array of indices and y is the grade.
+    Args:
+        sentences:
+        woi1:
+        woi2:
+        grades:
+
+    Returns:
+
+    """
+
+    # Fill placeholders in sentences
+    sentences_train_1 = []
+    sentences_train_2 = []
+    grades_train = []
+    for s, w1, w2, g in zip(sentences, woi1, woi2, grades):
+        sentences_train_1.append(s.replace(placeholder, w1))
+        sentences_train_2.append(s.replace(placeholder, w2))
+        grades_train.append([float(g)])
+
+    # Tokenize the training sentences according to its frequency.
+    tokenizer = Tokenizer(num_words=num_words, split=' ')
+    tokenizer.fit_on_texts(sentences_train_1 + sentences_train_2)
+
+    # print(tokenizer.word_index)  # To see the dicstionary
+    # print(tokenizer.document_count)  # To see the dicstionary
+
+    x_train_1 = tokenizer.texts_to_sequences(sentences_train_1)
+    x_train_2 = tokenizer.texts_to_sequences(sentences_train_2)
+
+    # Left pad the training sequences.
+    x_train_1 = pad_sequences(x_train_1)
+    x_train_2 = pad_sequences(x_train_2)
+    x_train = []
+    for x1, x2 in zip(x_train_1, x_train_2):
+        x_train.append(np.concatenate((x1, x2)))
+
+    y_train = np.asarray(grades_train)
+
+    assert len(x_train) == len(y_train)
+    return x_train, y_train
+
+
 def convert_to_trainingdata_for_lstm(sentences, woi1, woi2, grades):
     """
     Converts to a trainable dataformat for lstms where x is an array of indices and y is the grade.
@@ -127,5 +172,22 @@ def get_dataset_for_lstm():
                                                         woi1=woi1,
                                                         woi2=woi2,
                                                         grades=grades)
+
+    return split_dataset(x_data=x_train, y_data=y_train, ratio=0.8)
+
+
+def get_dataset_for_fcc():
+    trainset = 'data/task-1/train.csv'
+    validationset = 'data/task-1/dev.csv'
+
+    # Trainingset
+    dataset_train = load_raw_dataset(filename=trainset)
+    dataset_val = load_raw_dataset(filename=validationset)
+    dataset = dataset_train + dataset_val
+    sentences, woi1, woi2, grades = convert_data_to_basic(dataset)
+    x_train, y_train = convert_to_trainingdata_for_fcc(sentences=sentences,
+                                                       woi1=woi1,
+                                                       woi2=woi2,
+                                                       grades=grades)
 
     return split_dataset(x_data=x_train, y_data=y_train, ratio=0.8)
