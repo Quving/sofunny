@@ -14,7 +14,7 @@ def train_lstm_model(x_train, y_train, x_test, y_test):
     # Parameters
     embed_dim = len(x_train[0])
     batch_size = 32
-    epochs = 1
+    epochs = 20
     max_features = 10000
 
     # Model
@@ -25,7 +25,8 @@ def train_lstm_model(x_train, y_train, x_test, y_test):
     model.add(Dense(1, activation='tanh'))
     opt = Optimizers.RMSprop(lr=0.001)
     model.compile(loss='mse', optimizer=opt, metrics=['accuracy'])
-
+    print("Max grade {} ".format(max(y_train)))
+    print("Min grade {} ".format(min(y_train)))
     model.fit(x_train, y_train,
               batch_size=batch_size,
               epochs=epochs,

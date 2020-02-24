@@ -1,4 +1,5 @@
 import csv
+import pickle
 import re
 
 import numpy as np
@@ -40,7 +41,7 @@ def load_raw_dataset(filename):
         return list(csv_reader)
 
 
-def convert_data_to_basic(data):
+def convert_data_to_basic(data, remove_stopwords):
     """
     Convert the dataset into a basic form. Using 'xxxxx' as placeholder for the word of interest.
     Args:
@@ -68,11 +69,20 @@ def convert_data_to_basic(data):
 
         # Remove stopwords and apply stemming/lemmatizing
         word_tokens = word_tokenize(original)
-        filtered_sentence = [lemmatizer.lemmatize(w) for w in word_tokens if not w in stop_words]
+        if remove_stopwords:
+            filtered_sentence = [lemmatizer.lemmatize(w) for w in word_tokens if not w in stop_words]
+        else:
+            filtered_sentence = [lemmatizer.lemmatize(w) for w in word_tokens]
+
         sentences.append(" ".join(filtered_sentence))
         woi1.append(woi)
         woi2.append(data_point[2])
-        grades.append(data_point[4])
+
+        # If statement for test dataset that does not contain grade column.
+        if len(data_point) == 5:
+            grades.append(data_point[4])
+        else:
+            grades.append(-1.0)
 
     return sentences, woi1, woi2, grades
 
@@ -122,7 +132,7 @@ def convert_to_trainingdata_for_fcc(sentences, woi1, woi2, grades):
     return x_train, y_train
 
 
-def convert_to_trainingdata_for_lstm(sentences, woi1, woi2, grades):
+def convert_to_trainingdata_for_lstm(sentences, woi1, woi2, grades, use_stored_tokenizer=False):
     """
     Converts to a trainable dataformat for lstms where x is an array of indices and y is the grade.
     Args:
@@ -145,11 +155,19 @@ def convert_to_trainingdata_for_lstm(sentences, woi1, woi2, grades):
         grades_train.append([float(g)])
 
     # Tokenize the training sentences according to its frequency.
-    tokenizer = Tokenizer(num_words=num_words, split=' ')
-    tokenizer.fit_on_texts(sentences_train)
+    if not use_stored_tokenizer:
+        use_stored_tokenizer = Tokenizer(num_words=num_words, split=' ')
+        use_stored_tokenizer.fit_on_texts(sentences_train)
+        with open('models/tokenizer.pickle', 'wb') as pickle_file:
+            pickle.dump(use_stored_tokenizer, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+    else:
+        print("Load local tokenizer from file")
+        with open('models/tokenizer.pickle', 'rb') as pickle_file:
+            use_stored_tokenizer = pickle.load(pickle_file)
+
     # print(tokenizer.word_index)  # To see the dicstionary
     # print(tokenizer.document_count)  # To see the dicstionary
-    x_train = tokenizer.texts_to_sequences(sentences_train)
+    x_train = use_stored_tokenizer.texts_to_sequences(sentences_train)
 
     # Left pad the training sequences.
     x_train = pad_sequences(x_train)
@@ -167,7 +185,7 @@ def get_dataset_for_lstm():
     dataset_train = load_raw_dataset(filename=trainset)
     dataset_val = load_raw_dataset(filename=validationset)
     dataset = dataset_train + dataset_val
-    sentences, woi1, woi2, grades = convert_data_to_basic(dataset)
+    sentences, woi1, woi2, grades = convert_data_to_basic(dataset, remove_stopwords=False)
     x_train, y_train = convert_to_trainingdata_for_lstm(sentences=sentences,
                                                         woi1=woi1,
                                                         woi2=woi2,
@@ -184,7 +202,7 @@ def get_dataset_for_fcc():
     dataset_train = load_raw_dataset(filename=trainset)
     dataset_val = load_raw_dataset(filename=validationset)
     dataset = dataset_train + dataset_val
-    sentences, woi1, woi2, grades = convert_data_to_basic(dataset)
+    sentences, woi1, woi2, grades = convert_data_to_basic(dataset, remove_stopwords=False)
     x_train, y_train = convert_to_trainingdata_for_fcc(sentences=sentences,
                                                        woi1=woi1,
                                                        woi2=woi2,
