@@ -1,4 +1,4 @@
-from util_dataset import load_raw_dataset, convert_data_to_basic, convert_to_trainingdata, max_grade
+from util_dataset import load_raw_dataset, convert_data_to_basic, convert_to_trainingdata
 from util_model import import_model
 
 
@@ -15,14 +15,16 @@ def test_lstm():
                                                woi2=woi2,
                                                grades=grades,
                                                use_stored_tokenizer=True)
+
     # Load model
     modelname = 'fcc_v1'
     model = import_model(modelname=modelname)
     predictions = model.predict(x_train)
-    predictions = list(map(lambda n: n * max_grade, predictions))
-
-    print("Max {}".format(max(predictions)))
-    print("Min {}".format(min(predictions)))
+    for prediction in predictions:
+        prediction = list(prediction)
+        max_val = max(prediction)
+        classname = prediction.index(max_val) / 10
+        print(classname)
 
 
 if __name__ == '__main__':

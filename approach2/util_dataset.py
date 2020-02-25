@@ -133,7 +133,9 @@ def convert_to_trainingdata(sentences, woi1, woi2, grades, use_stored_tokenizer=
     y_train = np.asarray(grades_train)
 
     assert len(x_train) == len(y_train)
-    x_train, y_train = normalize_data(x_train, y_train, num_words, 3)
+
+    # Normalize only x_train
+    x_train, y_train = normalize_data(x_train, y_train, num_words, 1)
     return np.asanyarray(x_train), np.asanyarray(y_train)
 
 
@@ -171,5 +173,4 @@ def get_dataset_for_lstm(remove_stopwords=False):
                                                woi2=woi2,
                                                grades=grades)
 
-    # Normalize trainingdata
     return split_dataset(x_data=x_train, y_data=y_train, ratio=0.8)

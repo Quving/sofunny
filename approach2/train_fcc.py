@@ -1,45 +1,43 @@
 from __future__ import print_function
 
-import keras.optimizers as Optimizers
-from keras.layers import Dense
+import keras
+from keras.layers import Dense, Dropout
 from keras.models import Sequential
 
 from util_dataset import get_dataset_for_lstm
 from util_model import export_model
 
 
-def print_dataset_properties(x_train, y_train):
-    max_index, min_index = 0, 0
-    for x in x_train:
-        max_index = max(x) if max(x) > max_index else max_index
-        min_index = min(x) if min(x) > min_index else min_index
-
-    print("Max index {} ".format(max_index))
-    print("Min index {} ".format(min_index))
-    print("Max grade {} ".format(max(y_train)))
-    print("Min grade {} ".format(min(y_train)))
-
-
 def train_lstm_model(x_train, y_train, x_test, y_test):
     # Parameters
     embed_dim = len(x_train[0])
     batch_size = 32
-    epochs = 25
+    epochs = 100
+    num_classes = 31
+
+    y_train = list(map(lambda n: n * 10, y_train))
+    for y in y_train:
+        print(y)
+
+    y_train = keras.utils.to_categorical(y_train, num_classes)
+    y_test = list(map(lambda n: n * 10, y_test))
+    y_test = keras.utils.to_categorical(y_test, num_classes)
 
     # Model
     model = Sequential()
-    model.add(Dense(embed_dim, input_dim=embed_dim, activation='relu'))
-    model.add(Dense(200, activation='relu'))
-    model.add(Dense(200, activation='relu'))
-    model.add(Dense(1, activation='sigmoid'))
-    opt = Optimizers.Adam(lr=0.001)
-    model.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
+    model.add(Dense(256, activation='relu', input_dim=embed_dim))
+    model.add(Dropout(0.5))
+    model.add(Dense(512, activation='relu', input_dim=embed_dim))
+    model.add(Dropout(0.5))
+    model.add(Dense(num_classes, activation='softmax'))
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    print(model.metrics_names)
 
-    print_dataset_properties(x_train, y_train)
-    model.fit(x_train, y_train,
-              batch_size=batch_size,
-              epochs=epochs,
-              validation_data=(x_test, y_test))
+    history = model.fit(x_train, y_train,
+                        batch_size=batch_size,
+                        epochs=epochs,
+                        validation_split=0.1)
+
     loss, acc = model.evaluate(x_test, y_test, batch_size=batch_size)
 
     print('Training loss:', loss)
