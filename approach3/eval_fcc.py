@@ -2,7 +2,7 @@ from util_dataset import load_raw_dataset, convert_data_to_basic, convert_to_tra
 from util_model import import_model
 
 
-def test_lstm():
+def eval_lstm():
     # Prepare test dataset
     trainset = 'data/task-1/test.csv'
 
@@ -20,12 +20,19 @@ def test_lstm():
     modelname = 'fcc_v1'
     model = import_model(modelname=modelname)
     predictions = model.predict(x_train)
-    for prediction in predictions:
+
+    csv_dict = {"id": [], "pred": []}
+
+    for index, prediction in enumerate(predictions):
         prediction = list(prediction)
         max_val = max(prediction)
         classname = prediction.index(max_val) / 10
-        print(classname)
+        id = dataset_train[index][0]
+        print(id, classname)
+
+        csv_dict["id"].append(index)
+        csv_dict["pred"].append(classname)
 
 
 if __name__ == '__main__':
-    test_lstm()
+    eval_lstm()
