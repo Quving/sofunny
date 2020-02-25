@@ -40,8 +40,8 @@ def train_lstm_model(x_train, y_train, x_test, y_test):
 
     loss, acc = model.evaluate(x_test, y_test, batch_size=batch_size)
 
-    print('Training loss:', loss)
-    print('Training accuracy:', acc)
+    print('Test loss:', loss)
+    print('Test accuracy:', acc)
     export_model(model=model, modelname=modelname)
 
 

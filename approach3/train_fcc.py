@@ -38,15 +38,15 @@ def train_lstm_model(x_train, y_train, x_test, y_test):
 
     loss, acc = model.evaluate(x_test, y_test, batch_size=batch_size)
 
-    print('Training loss:', loss)
-    print('Training accuracy:', acc)
+    print('Test loss:', loss)
+    print('Test accuracy:', acc)
     export_model(model=model, modelname=modelname)
 
 
 if __name__ == '__main__':
     modelname = 'fcc_v1'
     x_train, y_train, x_test, y_test = get_dataset_for_lstm(remove_stopwords=True)
-    print(len(x_train), len(y_train))
+    print(len(x_train) + len(x_test))
     train_lstm_model(
         x_train=x_train,
         y_train=y_train,

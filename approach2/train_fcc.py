@@ -9,6 +9,7 @@ from util_model import export_model
 
 
 def train_lstm_model(x_train, y_train, x_test, y_test):
+
     # Parameters
     embed_dim = len(x_train[0])
     batch_size = 32
@@ -16,9 +17,6 @@ def train_lstm_model(x_train, y_train, x_test, y_test):
     num_classes = 31
 
     y_train = list(map(lambda n: n * 10, y_train))
-    for y in y_train:
-        print(y)
-
     y_train = keras.utils.to_categorical(y_train, num_classes)
     y_test = list(map(lambda n: n * 10, y_test))
     y_test = keras.utils.to_categorical(y_test, num_classes)
@@ -31,8 +29,8 @@ def train_lstm_model(x_train, y_train, x_test, y_test):
     model.add(Dropout(0.5))
     model.add(Dense(num_classes, activation='softmax'))
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-    print(model.metrics_names)
 
+    print(model.metrics_names)
     history = model.fit(x_train, y_train,
                         batch_size=batch_size,
                         epochs=epochs,
@@ -40,8 +38,8 @@ def train_lstm_model(x_train, y_train, x_test, y_test):
 
     loss, acc = model.evaluate(x_test, y_test, batch_size=batch_size)
 
-    print('Training loss:', loss)
-    print('Training accuracy:', acc)
+    print('Test loss:', loss)
+    print('Test accuracy:', acc)
     export_model(model=model, modelname=modelname)
 
 

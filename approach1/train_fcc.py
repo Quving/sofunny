@@ -21,10 +21,12 @@ def print_dataset_properties(x_train, y_train):
 
 
 def train_lstm_model(x_train, y_train, x_test, y_test):
+
     # Parameters
-    embed_dim = len(x_train[0])
+    embed_dim = 25
     batch_size = 32
     epochs = 25
+    learning_rate = 0.001
 
     # Model
     model = Sequential()
@@ -32,8 +34,8 @@ def train_lstm_model(x_train, y_train, x_test, y_test):
     model.add(Dense(200, activation='relu'))
     model.add(Dense(200, activation='relu'))
     model.add(Dense(1, activation='sigmoid'))
-    opt = Optimizers.Adam(lr=0.001)
-    model.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
+    opt = Optimizers.Adam(lr=learning_rate)
+    model.compile(loss='mse', optimizer=opt, metrics=['accuracy'])
 
     print_dataset_properties(x_train, y_train)
     model.fit(x_train, y_train,
@@ -42,8 +44,8 @@ def train_lstm_model(x_train, y_train, x_test, y_test):
               validation_data=(x_test, y_test))
     loss, acc = model.evaluate(x_test, y_test, batch_size=batch_size)
 
-    print('Training loss:', loss)
-    print('Training accuracy:', acc)
+    print('Test loss:', loss)
+    print('Test accuracy:', acc)
     export_model(model=model, modelname=modelname)
 
 
