@@ -6,8 +6,8 @@ from keras.layers import Embedding
 from keras.layers import LSTM
 from keras.models import Sequential
 
-from utils.util_dataset import get_dataset_for_lstm
-from utils.util_model import export_model
+from util_dataset import get_dataset_for_lstm
+from util_model import export_model
 
 
 def print_dataset_properties(x_train, y_train):

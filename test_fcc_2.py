@@ -1,6 +1,6 @@
-from utils.util_dataset import load_raw_dataset, convert_data_to_basic, max_grade, \
+from util_dataset import load_raw_dataset, convert_data_to_basic, max_grade, \
     convert_to_trainingdata_for_fcc
-from utils.util_model import import_model
+from util_model import import_model
 
 
 def test_lstm():
