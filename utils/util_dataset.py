@@ -92,7 +92,7 @@ def convert_data_to_basic(data, remove_stopwords):
     return sentences, woi1, woi2, grades
 
 
-def convert_to_trainingdata_for_fcc(sentences, woi1, woi2, grades):
+def convert_to_trainingdata_for_fcc(sentences, woi1, woi2, grades, use_stored_tokenizer=False):
     """
     Converts to a trainable dataformat for lstms where x is an array of indices and y is the grade.
     Args:
@@ -114,9 +114,15 @@ def convert_to_trainingdata_for_fcc(sentences, woi1, woi2, grades):
         sentences_train_2.append(s.replace(placeholder, w2))
         grades_train.append([float(g)])
 
-    # Tokenize the training sentences according to its frequency.
-    tokenizer = Tokenizer(num_words=num_words, split=' ')
-    tokenizer.fit_on_texts(sentences_train_1 + sentences_train_2)
+    if not use_stored_tokenizer:
+        tokenizer = Tokenizer(num_words=num_words, split=' ')
+        tokenizer.fit_on_texts(sentences_train_1 + sentences_train_2)
+        with open('models/tokenizer.pickle', 'wb') as pickle_file:
+            pickle.dump(tokenizer, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+    else:
+        print("Load local tokenizer from file")
+        with open('models/tokenizer.pickle', 'rb') as pickle_file:
+            tokenizer = pickle.load(pickle_file)
 
     # print(tokenizer.word_index)  # To see the dicstionary
     # print(tokenizer.document_count)  # To see the dicstionary
@@ -161,18 +167,18 @@ def convert_to_trainingdata_for_lstm(sentences, woi1, woi2, grades, use_stored_t
         grades_train.append([float(g)])
 
     if not use_stored_tokenizer:
-        use_stored_tokenizer = Tokenizer(num_words=num_words, split=' ')
-        use_stored_tokenizer.fit_on_texts(sentences_train)
+        tokenizer = Tokenizer(num_words=num_words, split=' ')
+        tokenizer.fit_on_texts(sentences_train)
         with open('models/tokenizer.pickle', 'wb') as pickle_file:
-            pickle.dump(use_stored_tokenizer, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(tokenizer, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
     else:
         print("Load local tokenizer from file")
         with open('models/tokenizer.pickle', 'rb') as pickle_file:
-            use_stored_tokenizer = pickle.load(pickle_file)
+            tokenizer = pickle.load(pickle_file)
 
     # print(tokenizer.word_index)  # To see the dicstionary
     # print(tokenizer.document_count)  # To see the dicstionary
-    x_train = use_stored_tokenizer.texts_to_sequences(sentences_train)
+    x_train = tokenizer.texts_to_sequences(sentences_train)
 
     # Left pad the training sequences.
     x_train = pad_sequences(x_train, maxlen=max_embedded_size)
@@ -203,7 +209,7 @@ def denormalize_data(x_train, y_train, x_train_max, y_train_max):
     return x_train_normalized, y_train_normalized
 
 
-def get_dataset_for_lstm():
+def get_dataset_for_lstm(remove_stopwords=False):
     trainset = 'data/task-1/train.csv'
     validationset = 'data/task-1/dev.csv'
 
@@ -211,7 +217,7 @@ def get_dataset_for_lstm():
     dataset_train = load_raw_dataset(filename=trainset)
     dataset_val = load_raw_dataset(filename=validationset)
     dataset = dataset_train + dataset_val
-    sentences, woi1, woi2, grades = convert_data_to_basic(dataset, remove_stopwords=False)
+    sentences, woi1, woi2, grades = convert_data_to_basic(dataset, remove_stopwords=remove_stopwords)
     x_train, y_train = convert_to_trainingdata_for_lstm(sentences=sentences,
                                                         woi1=woi1,
                                                         woi2=woi2,
@@ -221,7 +227,7 @@ def get_dataset_for_lstm():
     return split_dataset(x_data=x_train, y_data=y_train, ratio=0.8)
 
 
-def get_dataset_for_fcc():
+def get_dataset_for_fcc(remove_stopwords=False):
     trainset = 'data/task-1/train.csv'
     validationset = 'data/task-1/dev.csv'
 
@@ -229,7 +235,7 @@ def get_dataset_for_fcc():
     dataset_train = load_raw_dataset(filename=trainset)
     dataset_val = load_raw_dataset(filename=validationset)
     dataset = dataset_train + dataset_val
-    sentences, woi1, woi2, grades = convert_data_to_basic(dataset, remove_stopwords=False)
+    sentences, woi1, woi2, grades = convert_data_to_basic(dataset, remove_stopwords=remove_stopwords)
     x_train, y_train = convert_to_trainingdata_for_fcc(sentences=sentences,
                                                        woi1=woi1,
                                                        woi2=woi2,

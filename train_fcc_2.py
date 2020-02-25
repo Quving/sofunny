@@ -4,7 +4,7 @@ import keras.optimizers as Optimizers
 from keras.layers import Dense
 from keras.models import Sequential
 
-from utils.util_dataset import get_dataset_for_lstm
+from utils.util_dataset import get_dataset_for_fcc
 from utils.util_model import export_model
 
 
@@ -49,8 +49,9 @@ def train_lstm_model(x_train, y_train, x_test, y_test):
 
 
 if __name__ == '__main__':
-    modelname = 'fcc_1'
-    x_train, y_train, x_test, y_test = get_dataset_for_lstm(remove_stopwords=True)
+    modelname = 'fcc_2'
+    x_train, y_train, x_test, y_test = get_dataset_for_fcc(remove_stopwords=True)
+
     print(len(x_train), len(y_train))
     train_lstm_model(
         x_train=x_train,
