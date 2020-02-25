@@ -35,7 +35,7 @@ def train_fcc_model(x_train, y_train, x_test, y_test):
 
     print('Test score:', score)
     print('Test accuracy:', acc)
-    # export_model(model=model, modelname='fcc_v1')
+    export_model(model=model, modelname='fcc_v1')
 
 
 if __name__ == '__main__':

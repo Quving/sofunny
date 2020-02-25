@@ -10,7 +10,9 @@ from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 
 placeholder = 'xxxxx'
-num_words = 10000
+num_words = 10000  # Max features
+max_grade = 3
+max_embedded_size = 25
 
 
 def split_dataset(x_data, y_data, ratio):
@@ -26,7 +28,10 @@ def split_dataset(x_data, y_data, ratio):
     """
     assert ratio <= 1.0
     index = int(len(x_data) * ratio)
-    return x_data[:index], y_data[:index], x_data[index:], y_data[index:]
+    return np.asarray(x_data[:index]), \
+           np.asarray(y_data[:index]), \
+           np.asarray(x_data[index:]), \
+           np.asarray(y_data[index:])
 
 
 def load_raw_dataset(filename):
@@ -129,7 +134,8 @@ def convert_to_trainingdata_for_fcc(sentences, woi1, woi2, grades):
     y_train = np.asarray(grades_train)
 
     assert len(x_train) == len(y_train)
-    return x_train, y_train
+    x_train, y_train = normalize_data(x_train, y_train, num_words, max_grade)
+    return np.asanyarray(x_train), np.asanyarray(y_train)
 
 
 def convert_to_trainingdata_for_lstm(sentences, woi1, woi2, grades, use_stored_tokenizer=False):
@@ -154,7 +160,6 @@ def convert_to_trainingdata_for_lstm(sentences, woi1, woi2, grades, use_stored_t
         grades_train.append([0.0])
         grades_train.append([float(g)])
 
-    # Tokenize the training sentences according to its frequency.
     if not use_stored_tokenizer:
         use_stored_tokenizer = Tokenizer(num_words=num_words, split=' ')
         use_stored_tokenizer.fit_on_texts(sentences_train)
@@ -170,11 +175,32 @@ def convert_to_trainingdata_for_lstm(sentences, woi1, woi2, grades, use_stored_t
     x_train = use_stored_tokenizer.texts_to_sequences(sentences_train)
 
     # Left pad the training sequences.
-    x_train = pad_sequences(x_train)
+    x_train = pad_sequences(x_train, maxlen=max_embedded_size)
     y_train = np.asarray(grades_train)
 
     assert len(x_train) == len(y_train)
-    return x_train, y_train
+    x_train, y_train = normalize_data(x_train, y_train, num_words, 3)
+    return np.asanyarray(x_train), np.asanyarray(y_train)
+
+
+def normalize_data(x_train, y_train, x_train_max, y_train_max):
+    def normalize_datapoint(d, n_max):
+        return list(map(lambda n: n / n_max, d))
+
+    x_train_normalized = list(map(lambda x: normalize_datapoint(x, x_train_max), x_train))
+    y_train_normalized = list(map(lambda x: normalize_datapoint(x, y_train_max), y_train))
+
+    return x_train_normalized, y_train_normalized
+
+
+def denormalize_data(x_train, y_train, x_train_max, y_train_max):
+    def denormalize_datapoint(d, n_max):
+        return list(map(lambda n: n * n_max, d))
+
+    x_train_normalized = list(map(lambda x: denormalize_datapoint(x, x_train_max), x_train))
+    y_train_normalized = list(map(lambda x: denormalize_datapoint(x, y_train_max), y_train))
+
+    return x_train_normalized, y_train_normalized
 
 
 def get_dataset_for_lstm():
@@ -191,6 +217,7 @@ def get_dataset_for_lstm():
                                                         woi2=woi2,
                                                         grades=grades)
 
+    # Normalize trainingdata
     return split_dataset(x_data=x_train, y_data=y_train, ratio=0.8)
 
 
@@ -208,4 +235,6 @@ def get_dataset_for_fcc():
                                                        woi2=woi2,
                                                        grades=grades)
 
+    # Normalize trainingdata
+    x_train, y_train = normalize_data(x_train, y_train, num_words, max_grade)
     return split_dataset(x_data=x_train, y_data=y_train, ratio=0.8)
