@@ -1,0 +1,681 @@
+%
+% File sofunny.tex
+%
+%% Based on the style files for ACL 2018 and NAACL 2018, which were
+%% Based on the style files for ACL-2015, with some improvements
+%%  taken from the NAACL-2016 style
+%% Based on the style files for ACL-2014, which were, in turn,
+%% based on ACL-2013, ACL-2012, ACL-2011, ACL-2010, ACL-IJCNLP-2009,
+%% EACL-2009, IJCNLP-2008...
+%% Based on the style files for EACL 2006 by 
+%%e.agirre@ehu.es or Sergi.Balari@uab.es
+%% and that of ACL 08 by Joakim Nivre and Noah Smith
+
+\documentclass[11pt,a4paper]{article}
+\usepackage[hyperref]{sofunny}
+\usepackage{times}
+\usepackage{latexsym}
+\usepackage{graphicx}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{dirtytalk}
+\usepackage{amsmath}
+
+
+%\aclfinalcopy % Uncomment this line for the final submission
+%\def\aclpaperid{***} %  Enter the acl Paper ID here
+
+%\setlength\titlebox{5cm}
+% You can expand the titlebox if you need extra space
+% to show all the authors. Please do not make the titlebox
+% smaller than 5cm (the original size); we will check this
+% in the camera-ready version and ask you to change it back.
+
+\newcommand\BibTeX{B{\sc ib}\TeX}
+
+\title{Assessing Humor in Edited News Headlines}
+\aclfinalcopy
+\author{Vinh Ngu \\
+  {\tt 2ngu@inf...} \\\And
+  Finn Rietz \\
+  {\tt 5rietz@inf...} \\}
+
+\date{}
+
+%\usepackage[
+%backend=biber,
+%style=alphabetic,
+%sorting=ynt
+%]{biblatex}
+
+%\addbibresource{naaclhlt2019.bib}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+In this paper we will present our results and methodology in the context of a Competition \say{\textbf{SemEval-2020 Task 7: Assessing Humor in Edited News Headlines}}. In total, we have developed three different approaches based on different assumptions and interpretations of the provided data set. We achieved an accuracy of \textbf{24\%}. Given the fact that there are 31 possibilities and thus an expected value of 3\%, we have achieved a \textbf{seven times greater} accuracy than blind guessing.
+\end{abstract}
+
+\section{Introduction}
+For the applied project part of the Deep Learning Seminar, we took part in the SemEval2020 competition titled "Assessing the Funniness of Edited News Headlines". The concrete task, as formulated in the competition, is to evaluate the \textit{funniness} of an atomic edit made to a newspaper headline. Thus, the high-level goal of this challenge is to gain a deeper understanding of general indicators that make for a funny, simple change to a given (short) text like a newspaper headline.
+
+Generally, humor-related datasets are usually annotated in a categorical fashion (e.g. funny vs not funny), thus, the intensity of the humor can not be accessed and ranking in terms of {funniness} is not possible. Specifically, in terms of atomic edits, the ability to rank them according to funniness is desirable for various applications, including humor-generation scenarios \cite{hossain-etal-2019-president}. 
+
+Motivated by this, the competition is formulated in terms of a regression problem, where participants need to develop a system that can predict a regression score for a given edit. The organizers offer an additional, second task, that is only considered with the direct comparison of two edits, where the funnier of the two must be determined. However, as this problem can be solved implicitly by solving the regression problem of predicting the funniness score of an edit, we set our focus on the regression task.
+
+\section{Dataset}
+\begin{figure*}[ht]
+	\centering
+    \includegraphics[width=1\textwidth, angle=0]{imgs/dataset-train.png}
+	\caption{A screenshot of the first 5 datapoints of the published training-dataset. Each line contains a sentence where a word is marked. If you replace this marked word with the word from the column 'edit' the sentence gets a score of funniness (meanGrade).}
+	\label{fig1}
+\end{figure*}
+
+The underlying dataset for the competition is the \textit{Humicroedit} dataset as presented by Hossain, Krumm and Gamon \cite{hossain-etal-2019-president}. The dataset contains 15,095 edited headlines. One item in the dataset consists of the original headline, an indicator for which word will be edited or changed, and the proposed edit. Each item has been rated in terms of its funniness by five jurors, that could assign the edit one of the following ratings: \textbf{0}: Not funny, \textbf{1}: Slightly funny, \textbf{2}: Moderately funny and \textbf{3}: Funny. 
+
+Based on the five scores, a mean grade for the edit is determined. This mean grade operates as the primary measure of interest, as the individual submissions to the competition are ranked according to the \textit{root mean squared error} (RMSE) between the predicted funniness grade and the ground truth mean grade.
+
+\subsection{Artificial data addition}\label{sec:data_gen}
+When investigating the tasks in greater detail and brainstorming for possible approaches, it became quickly apparent that there is a significant and informative relationship between the unedited and edited versions of the headline. While there are numerous possibilities to model this relationship, we tried to incorporate this by adding both versions of the headline to our dataset. We accomplished this by adding the unedited version of each headline with a ground truth score of zero for the funniness grade. Thus, our \textit{adjusted} version of the Humicroedit dataset contains two items for every original one, where every item is a  tuple of the headline and the assigned funniness grade. 
+
+While the adjusted version of the dataset contains a baseline to compare each headline against, it generally has the disadvantage of being largely biased towards a mean funniness grade of zero, as 50\% of the items in the dataset have a mean funniness grade of zero, with the other 50\% consisting all the other funniness grade present in the original dataset. To account for this, we apply each developed method on both versions of the dataset and report results accordingly.
+
+\section{Data Preprocessing}
+\label{sec:data-preprocessing}
+The dataset provided by the competition is not readable on default by the model. Hence, we needed to prepare it first. Given the sentence with the id \say{8713} \ref{fig1} \say{In an apparent first, Iran and Israel \textbf{xxxx} each other military} we have unfold the sentence into two phrases. \begin{enumerate}
+    \item The first sentence is composed of the original word of interest \say{engage} and the second one is made of the word \say{slap}. In approach 1 und 2 we have added the score \textbf{0.0} and \textbf{0.4} for sentence 1 and sentence 2 described above. We have assumed, original sentences are facts and not funny at all, so we scored these with 0.0 level of funniness.
+    \item Afterwards, we have applied stemming and lemmatizing algorithms on the dataset to remove redundant words such as \say{eat}, \say{ate} and \say{eaten} would be reduced to \say{eat}.
+    \item   We embedded the words by the frequency of their occurrence within the text corpus in order to make them machine-readable.
+    \item We have left-padded the sequences by zeros to ensure a consistently defined length of 25 integers.
+    \item Finally, we normalized the values to a range between 0 and 1.
+\end{enumerate}
+
+\section{Approach}
+There are numerous possibilities for modeling the relationship between the edited and unedited versions of each item. Thus, we tried to model this relationship with a total of three distinct approached, where approaches one and two have been applied to both the original and adjusted version of the Humicroedit dataset. 
+
+\subsection{Model architecture}
+Independently of the approach, we employed a simplistic fully connected model with dropout regularization. Based on a simplistic hyperparameter optimization we identified adequate neuron numbers and for the hidden layers, which vary slightly across the different approaches. The main difference in the model for the approaches manifests in the output layer, which is adjusted according to each approach, as described in greater detail in the following sections. 
+\subsection{Approach 1}
+This approach aims at learning the funniness of headlines in general instead of the direct edit. Thus, we try to predict the mean funniness grade of each headline and treat the task as a regression problem. Accordingly, the general model is adjusted to output a floating-point number to represent the mean funniness grade of the headline. Each data-point results in two tuples, according to the steps described in the data preprocessing section \ref{sec:data-preprocessing}. An exemplary representation is given below:
+\begin{equation}
+    [0,0,0.83,0.4,0.6,0.13,0.24] \rightarrow  [0.24]
+\end{equation}
+Based on the previously reported upon generation of the adjusted dataset, we applied this approach to both versions of the dataset. The results of this are provided in table \ref{tab:results}.
+
+\subsection{Approach 2}
+For our second approach, we reformulated the problem from a regression problem towards a classification problem. Here, we discretized the output space into 31 discrete bins, where the bins correspond to the discretized output space of the mean funniness grade, which ranges from 0.0 to 3.0. Thus each bin has a width 0.1 of the previously continuous output space. 
+A training sample could have the following shape: 
+\begin{equation}
+    [0,0,0.83,0.4,0.6,0.13,0.24] \rightarrow  [0\textsubscript{0},1\textsubscript{1},..., 0\textsubscript{30}]
+\end{equation}
+Accordingly, we adapted our model to this kind of problem. Concretely, our output is now a {31-dimensional} vector, with a softmax activation function, and the bin with the highest probability is accepted as final prediction.
+
+There are additional possibilities for a more sophisticated activation function. For example, it could be appropriate to report the mean of the activations in the final layer instead of the softmax, depending on the variance of the activations in the final layer. However, further testing would be required to confirm that this yields a reduction of loss.
+
+Again, as for the first approach, we applied this approach to both versions of the dataset and report results in table \ref{tab:results}
+
+\subsection{Approach 3}
+Finally, for our third and last approach, we chose a joint vector representation to model the relationship between the unedited and the edited version of the headline. Concretely, this means that we try to predict the binned probability as in approach 2, but the input to the model is the embedding of the concatenation of the edited and unedited version of the headline. 
+
+In this setting, where we represent the relationship between original and edited headline directly in each item, we don't need to store the baseline headlines with a mean funniness grade of zero. Thus, as indicated in table \ref{tab:results}, we only apply the algorithm on the joint version of the Humicroedit dataset. Accordingly, a sample can have the following shape
+\begin{equation}
+    \begin{split}
+    [0,0,0.83,0.4,0.6,0.13,0.24, \\
+    0,0,0.83,0.21,0.6,0.13,0.24]] \rightarrow  [0\textsubscript{0},1\textsubscript{1},..., 0\textsubscript{30}]
+    \end{split}
+\end{equation}
+We assume that this data representation yields a stronger encoding of the relationship between the edited and unedited version compared to approach 1 and 2.
+
+
+\subsection{Training}
+Our final approach 3 promises the best results so far among the three introduced approaches. Hence, this section focus on approach 3. As stated, we have not changed the hyperparameters within the 3 approaches. We used the Adam-Optimizer with the learning-rate of 0.001. After 100 epochs we have achieved a rmse loss of \textbf{1.4754} and an accuracy of \textbf{0.238} on the training-set.
+
+\subsubsection{Model}
+The models input-layer is made of 256 units followed by a hidden-layer composed of 512 units. Both layers are using the activation-function \say{relu}. The input dimension of the input-layer is twice as long as the max embedding length (25*2). Accordingly to the number of classes the output-layer is equipped with 31 units combined with the \say{softmax} activation-function.
+
+
+\newpage
+
+\subsection{Results}
+Generally, approach three indicates the most promising results, in terms of accuracy. Here, accuracy translates to the prediction of the right bin of discretized mean funniness grade. This indicates that the direct modeling of the relation between the two versions of the headline with the joint vector representation is most potent for this kind of problem. However, this approach also produces a relatively high root mean squared error. This is to be considered for the specifically for the SemEval 2020 challenge where this task originates from because the key criterion there is the RMSE loss over the entire test data set.
+
+% Please add the following required packages to your document preamble:
+% \usepackage{booktabs}
+\begin{table}[]
+\centering
+\begin{tabular}{@{}ccccc@{}}
+\toprule
+Dataset: & Original & Adjusted & Joint &  \\ 
+ & Acc $\mid$ Loss & Acc $\mid$ Loss & Acc $\mid$ Loss &  \\ \midrule
+ Approach 1 & $0.04 \mid \mathbf{0.20}$ & $0.52 \mid \mathbf{0.20}$ & X &  \\
+ Approach 2 & $0.10 \mid 1.61$ & $0.51 \mid 1.38$ & X &  \\
+ Approach 3 & X & X & $\mathbf{0.11} \mid 1.62$ &  \\ \bottomrule
+\end{tabular}
+\caption{Results obtained from the three different approaches on the different versions of the dataset. Metrics were calculated on the test-set.}
+\label{tab:results}
+\end{table}
+
+Further, from table \ref{tab:results} we can observe a surprisingly low RMSE loss for approach 1, paired with a relatively high accuracy of 0.5 on the adjusted dataset and very low accuracy of 0.04 on the original dataset. We currently have no explanation for this low error in combination with poor accuracy on the original dataset and assume some unintended mechanism in the way Keras calculates the accuracy metric for the regression problem. 
+
+The high accuracy scores for approach 1 and 2 on the adjusted dataset can be explained by the significant imbalance of classes in the dataset, as describe in section \ref{sec:data_gen}. 
+
+Even though our obtained accuracy and RMSE loss scores (as reported in table \ref{tab:results}) don't indicate strong results, we uploaded our results in the requested form to the SemEval 2020 and are at the time of writing ranked 82 of 85 with a RMSE of 0.72 (for comparison, rank 1 currently achieves a RMSE of 0.51) \cite{rankings}. This indicates that our results can not compete with the best models that currently take part in the competition, but also that the tasks not fully solved, with even the best performing models achieving a high RMSE of 0.5 (on a scale of 0-3).
+
+\section{Conclusion}
+For the task of predicting the funniness associated with atomic edits, we implemented three distinct approaches. We employed a simplistic fully connected model with dropout and only slightly varied the architecture for each of the approaches. We created multiple data representations in an attempt to model the relationship between the unedited and edited versions of the headlines. The scores of approach three, which we are most confident in, still perform four times better than random guessing (3\% accuracy random vs 11\% accuracy obtained) on the test-set and seven times better on the training set (3\% accuracy random vs 24\% accuracy obtained). Our ranking on the development set of the SemEval 2020 competition indicates that a more sophisticated data representation and or model are needed, while even the best performing competitors don't achieve scores largely different to ours, which indicates how challenging it still is to assess humor through machine learning methods.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+% everything after here is hidden, stuff that was already in the tempalte
+\iffalse
+
+\begin{abstract}
+  This document contains the instructions for preparing a camera-ready
+  manuscript for the proceedings of NAACL-HLT 2019. The document itself
+  conforms to its own specifications, and is therefore an example of
+  what your manuscript should look like. These instructions should be
+  used for both papers submitted for review and for final versions of
+  accepted papers.  Authors are asked to conform to all the directions
+  reported in this document.
+\end{abstract}
+
+\section{Credits}
+
+This document has been adapted from the instructions
+for earlier ACL and NAACL proceedings,
+including 
+those for ACL 2018 by Shay Cohen, Kevin Gimpel, and Wei Lu, 
+NAACL 2018 by Margaret Michell and Stephanie Lukin,
+2017/2018 (NA)ACL bibtex suggestions from Jason Eisner,
+ACL 2017 by Dan Gildea and Min-Yen Kan, 
+NAACL 2017 by Margaret Mitchell, 
+ACL 2012 by Maggie Li and Michael White, 
+those from ACL 2010 by Jing-Shing Chang and Philipp Koehn, 
+those for ACL 2008 by JohannaD. Moore, Simone Teufel, James Allan, and Sadaoki Furui, 
+those for ACL 2005 by Hwee Tou Ng and Kemal Oflazer, 
+those for ACL 2002 by Eugene Charniak and Dekang Lin, 
+and earlier ACL and EACL formats.
+Those versions were written by several
+people, including John Chen, Henry S. Thompson and Donald
+Walker. Additional elements were taken from the formatting
+instructions of the {\em International Joint Conference on Artificial
+  Intelligence} and the \emph{Conference on Computer Vision and
+  Pattern Recognition}.
+
+\section{Introduction}
+
+The following instructions are directed to authors of papers submitted
+to NAACL-HLT 2019 or accepted for publication in its proceedings. All
+authors are required to adhere to these specifications. Authors are
+required to provide a Portable Document Format (PDF) version of their
+papers. \textbf{The proceedings are designed for printing on A4
+paper.}
+
+\section{General Instructions}
+
+Manuscripts must be in two-column format.  Exceptions to the
+two-column format include the title, authors' names and complete
+addresses, which must be centered at the top of the first page, and
+any full-width figures or tables (see the guidelines in
+Subsection~\ref{ssec:first}). {\bf Type single-spaced.}  Start all
+pages directly under the top margin. See the guidelines later
+regarding formatting the first page.  The manuscript should be
+printed single-sided and its length
+should not exceed the maximum page limit described in Section~\ref{sec:length}.
+Pages are numbered for  initial submission. However, {\bf do not number the pages in the camera-ready version}.
+
+By uncommenting {\small\verb|\aclfinalcopy|} at the top of this 
+ document, it will compile to produce an example of the camera-ready formatting; by leaving it commented out, the document will be anonymized for initial submission.  When you first create your submission on softconf, please fill in your submitted paper ID where {\small\verb|***|} appears in the {\small\verb|\def\aclpaperid{***}|} definition at the top.
+
+The review process is double-blind, so do not include any author information (names, addresses) when submitting a paper for review.  
+However, you should maintain space for names and addresses so that they will fit in the final (accepted) version.  The NAACL-HLT 2019 \LaTeX\ style will create a titlebox space of 2.5in for you when {\small\verb|\aclfinalcopy|} is commented out.  
+
+The author list for submissions should include all (and only) individuals who made substantial contributions to the work presented. Each author listed on a submission to NAACL-HLT 2019 will be notified of submissions, revisions and the final decision. No authors may be added to or removed from submissions to NAACL-HLT 2019 after the submission deadline.
+
+\subsection{The Ruler}
+The NAACL-HLT 2019 style defines a printed ruler which should be presented in the
+version submitted for review.  The ruler is provided in order that
+reviewers may comment on particular lines in the paper without
+circumlocution.  If you are preparing a document without the provided
+style files, please arrange for an equivalent ruler to
+appear on the final output pages.  The presence or absence of the ruler
+should not change the appearance of any other content on the page.  The
+camera ready copy should not contain a ruler. (\LaTeX\ users may uncomment the {\small\verb|\aclfinalcopy|} command in the document preamble.)  
+
+Reviewers: note that the ruler measurements do not align well with
+lines in the paper -- this turns out to be very difficult to do well
+when the paper contains many figures and equations, and, when done,
+looks ugly. In most cases one would expect that the approximate
+location will be adequate, although you can also use fractional
+references ({\em e.g.}, the first paragraph on this page ends at mark $108.5$).
+
+\subsection{Electronically-available resources}
+
+NAACL-HLT provides this description in \LaTeX2e{} ({\small\tt naaclhlt2019.tex}) and PDF
+format ({\small\tt naaclhlt2019.pdf}), along with the \LaTeX2e{} style file used to
+format it ({\small\tt naaclhlt2019.sty}) and an ACL bibliography style ({\small\tt acl\_natbib.bst})
+and example bibliography ({\small\tt naaclhlt2019.bib}).
+These files are all available at
+{\small\tt http://naacl2019.org/downloads/ naaclhlt2019-latex.zip}. 
+ We
+strongly recommend the use of these style files, which have been
+appropriately tailored for the NAACL-HLT 2019 proceedings.
+
+\subsection{Format of Electronic Manuscript}
+\label{sect:pdf}
+
+For the production of the electronic manuscript you must use Adobe's
+Portable Document Format (PDF). PDF files are usually produced from
+\LaTeX\ using the \textit{pdflatex} command. If your version of
+\LaTeX\ produces Postscript files, you can convert these into PDF
+using \textit{ps2pdf} or \textit{dvipdf}. On Windows, you can also use
+Adobe Distiller to generate PDF.
+
+Please make sure that your PDF file includes all the necessary fonts
+(especially tree diagrams, symbols, and fonts with Asian
+characters). When you print or create the PDF file, there is usually
+an option in your printer setup to include none, all or just
+non-standard fonts.  Please make sure that you select the option of
+including ALL the fonts. \textbf{Before sending it, test your PDF by
+  printing it from a computer different from the one where it was
+  created.} Moreover, some word processors may generate very large PDF
+files, where each page is rendered as an image. Such images may
+reproduce poorly. In this case, try alternative ways to obtain the
+PDF. One way on some systems is to install a driver for a postscript
+printer, send your document to the printer specifying ``Output to a
+file'', then convert the file to PDF.
+
+It is of utmost importance to specify the \textbf{A4 format} (21 cm
+x 29.7 cm) when formatting the paper. When working with
+{\tt dvips}, for instance, one should specify {\tt -t a4}.
+Or using the command \verb|\special{papersize=210mm,297mm}| in the latex
+preamble (directly below the \verb|\usepackage| commands). Then using 
+{\tt dvipdf} and/or {\tt pdflatex} which would make it easier for some.
+
+Print-outs of the PDF file on A4 paper should be identical to the
+hardcopy version. If you cannot meet the above requirements about the
+production of your electronic submission, please contact the
+publication chairs as soon as possible.
+
+\subsection{Layout}
+\label{ssec:layout}
+
+Format manuscripts two columns to a page, in the manner these
+instructions are formatted. The exact dimensions for a page on A4
+paper are:
+
+\begin{itemize}
+\item Left and right margins: 2.5 cm
+\item Top margin: 2.5 cm
+\item Bottom margin: 2.5 cm
+\item Column width: 7.7 cm
+\item Column height: 24.7 cm
+\item Gap between columns: 0.6 cm
+\end{itemize}
+
+\noindent Papers should not be submitted on any other paper size.
+ If you cannot meet the above requirements about the production of 
+ your electronic submission, please contact the publication chairs 
+ above as soon as possible.
+
+\subsection{Fonts}
+
+For reasons of uniformity, Adobe's {\bf Times Roman} font should be
+used. In \LaTeX2e{} this is accomplished by putting
+
+\begin{quote}
+\begin{verbatim}
+\usepackage{times}
+\usepackage{latexsym}
+\end{verbatim}
+\end{quote}
+in the preamble. If Times Roman is unavailable, use {\bf Computer
+  Modern Roman} (\LaTeX2e{}'s default).  Note that the latter is about
+  10\% less dense than Adobe's Times Roman font.
+
+\begin{table}[t!]
+\begin{center}
+\begin{tabular}{|l|rl|}
+\hline \bf Type of Text & \bf Font Size & \bf Style \\ \hline
+paper title & 15 pt & bold \\
+author names & 12 pt & bold \\
+author affiliation & 12 pt & \\
+the word ``Abstract'' & 12 pt & bold \\
+section titles & 12 pt & bold \\
+document text & 11 pt  &\\
+captions & 10 pt & \\
+abstract text & 10 pt & \\
+bibliography & 10 pt & \\
+footnotes & 9 pt & \\
+\hline
+\end{tabular}
+\end{center}
+\caption{\label{font-table} Font guide. }
+\end{table}
+
+\subsection{The First Page}
+\label{ssec:first}
+
+Center the title, author's name(s) and affiliation(s) across both
+columns. Do not use footnotes for affiliations. Do not include the
+paper ID number assigned during the submission process. Use the
+two-column format only when you begin the abstract.
+
+{\bf Title}: Place the title centered at the top of the first page, in
+a 15-point bold font. (For a complete guide to font sizes and styles,
+see Table~\ref{font-table}) Long titles should be typed on two lines
+without a blank line intervening. Approximately, put the title at 2.5
+cm from the top of the page, followed by a blank line, then the
+author's names(s), and the affiliation on the following line. Do not
+use only initials for given names (middle initials are allowed). Do
+not format surnames in all capitals ({\em e.g.}, use ``Mitchell'' not
+``MITCHELL'').  Do not format title and section headings in all
+capitals as well except for proper names (such as ``BLEU'') that are
+conventionally in all capitals.  The affiliation should contain the
+author's complete address, and if possible, an electronic mail
+address. Start the body of the first page 7.5 cm from the top of the
+page.
+
+The title, author names and addresses should be completely identical
+to those entered to the electronical paper submission website in order
+to maintain the consistency of author information among all
+publications of the conference. If they are different, the publication
+chairs may resolve the difference without consulting with you; so it
+is in your own interest to double-check that the information is
+consistent.
+
+{\bf Abstract}: Type the abstract at the beginning of the first
+column. The width of the abstract text should be smaller than the
+width of the columns for the text in the body of the paper by about
+0.6 cm on each side. Center the word {\bf Abstract} in a 12 point bold
+font above the body of the abstract. The abstract should be a concise
+summary of the general thesis and conclusions of the paper. It should
+be no longer than 200 words. The abstract text should be in 10 point font.
+
+{\bf Text}: Begin typing the main body of the text immediately after
+the abstract, observing the two-column format as shown in the present document. Do not include page numbers.
+
+{\bf Indent}: Indent when starting a new paragraph, about 0.4 cm. Use 11 points for text and subsection headings, 12 points for section headings and 15 points for the title. 
+
+
+\begin{table}
+\centering
+\small
+\begin{tabular}{cc}
+\begin{tabular}{|l|l|}
+\hline
+{\bf Command} & {\bf Output}\\\hline
+\verb|{\"a}| & {\"a} \\
+\verb|{\^e}| & {\^e} \\
+\verb|{\`i}| & {\`i} \\ 
+\verb|{\.I}| & {\.I} \\ 
+\verb|{\o}| & {\o} \\
+\verb|{\'u}| & {\'u}  \\ 
+\verb|{\aa}| & {\aa}  \\\hline
+\end{tabular} & 
+\begin{tabular}{|l|l|}
+\hline
+{\bf Command} & {\bf  Output}\\\hline
+\verb|{\c c}| & {\c c} \\ 
+\verb|{\u g}| & {\u g} \\ 
+\verb|{\l}| & {\l} \\ 
+\verb|{\~n}| & {\~n} \\ 
+\verb|{\H o}| & {\H o} \\ 
+\verb|{\v r}| & {\v r} \\ 
+\verb|{\ss}| & {\ss} \\\hline
+\end{tabular}
+\end{tabular}
+\caption{Example commands for accented characters, to be used in, {\em e.g.}, \BibTeX\ names.}\label{tab:accents}
+\end{table}
+
+\subsection{Sections}
+
+{\bf Headings}: Type and label section and subsection headings in the
+style shown on the present document.  Use numbered sections (Arabic
+numerals) in order to facilitate cross references. Number subsections
+with the section number and the subsection number separated by a dot,
+in Arabic numerals.
+Do not number subsubsections.
+
+\begin{table*}[t!]
+\centering
+\begin{tabular}{lll}
+  output & natbib & previous ACL style files\\
+  \hline
+  \citep{Gusfield:97} & \verb|\citep| & \verb|\cite| \\
+  \citet{Gusfield:97} & \verb|\citet| & \verb|\newcite| \\
+  \citeyearpar{Gusfield:97} & \verb|\citeyearpar| & \verb|\shortcite| \\
+\end{tabular}
+\caption{Citation commands supported by the style file.
+  The citation style is based on the natbib package and
+  supports all natbib citation commands.
+  It also supports commands defined in previous ACL style files
+  for compatibility.
+  }
+\end{table*}
+
+{\bf Citations}: Citations within the text appear in parentheses
+as~\cite{Gusfield:97} or, if the author's name appears in the text
+itself, as Gusfield~\shortcite{Gusfield:97}.
+Using the provided \LaTeX\ style, the former is accomplished using
+{\small\verb|\cite|} and the latter with {\small\verb|\shortcite|} or {\small\verb|\newcite|}. Collapse multiple citations as in~\cite{Gusfield:97,Aho:72}; this is accomplished with the provided style using commas within the {\small\verb|\cite|} command, {\em e.g.}, {\small\verb|\cite{Gusfield:97,Aho:72}|}. Append lowercase letters to the year in cases of ambiguities.  
+ Treat double authors as
+in~\cite{Aho:72}, but write as in~\cite{Chandra:81} when more than two
+authors are involved. Collapse multiple citations as
+in~\cite{Gusfield:97,Aho:72}. Also refrain from using full citations
+as sentence constituents.
+
+We suggest that instead of
+\begin{quote}
+  ``\cite{Gusfield:97} showed that ...''
+\end{quote}
+you use
+\begin{quote}
+``Gusfield \shortcite{Gusfield:97}   showed that ...''
+\end{quote}
+
+If you are using the provided \LaTeX{} and Bib\TeX{} style files, you
+can use the command \verb|\citet| (cite in text)
+to get ``author (year)'' citations.
+
+If the Bib\TeX{} file contains DOI fields, the paper
+title in the references section will appear as a hyperlink
+to the DOI, using the hyperref \LaTeX{} package.
+To disable the hyperref package, load the style file
+with the \verb|nohyperref| option: \\{\small
+\verb|\usepackage[nohyperref]{naaclhlt2019}|}
+
+
+\textbf{Digital Object Identifiers}:  As part of our work to make ACL
+materials more widely used and cited outside of our discipline, ACL
+has registered as a CrossRef member, as a registrant of Digital Object
+Identifiers (DOIs), the standard for registering permanent URNs for
+referencing scholarly materials.  As of 2017, we are requiring all
+camera-ready references to contain the appropriate DOIs (or as a
+second resort, the hyperlinked ACL Anthology Identifier) to all cited
+works.  Thus, please ensure that you use Bib\TeX\ records that contain
+DOI or URLs for any of the ACL materials that you reference.
+Appropriate records should be found for most materials in the current
+ACL Anthology at \url{http://aclanthology.info/}.
+
+As examples, we cite \cite{P16-1001} to show you how papers with a DOI
+will appear in the bibliography.  We cite \cite{C14-1001} to show how
+papers without a DOI but with an ACL Anthology Identifier will appear
+in the bibliography.  
+
+As reviewing will be double-blind, the submitted version of the papers
+should not include the authors' names and affiliations. Furthermore,
+self-references that reveal the author's identity, {\em e.g.},
+\begin{quote}
+``We previously showed \cite{Gusfield:97} ...''  
+\end{quote}
+should be avoided. Instead, use citations such as 
+\begin{quote}
+``\citeauthor{Gusfield:97} \shortcite{Gusfield:97}
+previously showed ... ''
+\end{quote}
+
+Any preliminary non-archival versions of submitted papers should be listed in the submission form but not in the review version of the paper. NAACL-HLT 2019 reviewers are generally aware that authors may present preliminary versions of their work in other venues, but will not be provided the list of previous presentations from the submission form. 
+
+
+\textbf{Please do not use anonymous citations} and do not include
+ when submitting your papers. Papers that do not
+conform to these requirements may be rejected without review.
+
+\textbf{References}: Gather the full set of references together under
+the heading {\bf References}; place the section before any Appendices. 
+Arrange the references alphabetically
+by first author, rather than by order of occurrence in the text.
+By using a .bib file, as in this template, this will be automatically 
+handled for you. See the \verb|\bibliography| commands near the end for more.
+
+Provide as complete a citation as possible, using a consistent format,
+such as the one for {\em Computational Linguistics\/} or the one in the 
+{\em Publication Manual of the American 
+Psychological Association\/}~\cite{APA:83}. Use of full names for
+authors rather than initials is preferred. A list of abbreviations
+for common computer science journals can be found in the ACM 
+{\em Computing Reviews\/}~\cite{ACM:83}.
+
+The \LaTeX{} and Bib\TeX{} style files provided roughly fit the
+American Psychological Association format, allowing regular citations, 
+short citations and multiple citations as described above.  
+
+\begin{itemize}
+\item Example citing an arxiv paper: \cite{rasooli-tetrault-2015}. 
+\item Example article in journal citation: \cite{Ando2005}.
+\item Example article in proceedings, with location: \cite{borsch2011}.
+\item Example article in proceedings, without location: \cite{andrew2007scalable}.
+\end{itemize}
+See corresponding .bib file for further details.
+
+Submissions should accurately reference prior and related work, including code and data. If a piece of prior work appeared in multiple venues, the version that appeared in a refereed, archival venue should be referenced. If multiple versions of a piece of prior work exist, the one used by the authors should be referenced. Authors should not rely on automated citation indices to provide accurate references for prior and related work.
+
+{\bf Appendices}: Appendices, if any, directly follow the text and the
+references (but see above).  Letter them in sequence and provide an
+informative title: {\bf Appendix A. Title of Appendix}.
+
+\subsection{Footnotes}
+
+{\bf Footnotes}: Put footnotes at the bottom of the page and use 9
+point font. They may be numbered or referred to by asterisks or other
+symbols.\footnote{This is how a footnote should appear.} Footnotes
+should be separated from the text by a line.\footnote{Note the line
+separating the footnotes from the text.}
+
+\subsection{Graphics}
+
+{\bf Illustrations}: Place figures, tables, and photographs in the
+paper near where they are first discussed, rather than at the end, if
+possible.  Wide illustrations may run across both columns.  Color
+illustrations are discouraged, unless you have verified that  
+they will be understandable when printed in black ink.
+
+{\bf Captions}: Provide a caption for every illustration; number each one
+sequentially in the form:  ``Figure 1. Caption of the Figure.'' ``Table 1.
+Caption of the Table.''  Type the captions of the figures and 
+tables below the body, using 10 point text. Captions should be placed below illustrations. Captions that are one line are centered (see Table~\ref{font-table}). Captions longer than one line are left-aligned (see Table~\ref{tab:accents}). Do not overwrite the default caption sizes. The naaclhlt2019.sty file is compatible with the caption and subcaption packages; do not add optional arguments.
+
+
+\subsection{Accessibility}
+\label{ssec:accessibility}
+
+In an effort to accommodate people who are color-blind (as well as those printing
+to paper), grayscale readability for all accepted papers will be
+encouraged.  Color is not forbidden, but authors should ensure that
+tables and figures do not rely solely on color to convey critical
+distinctions. A simple criterion: All curves and points in your figures should be clearly distinguishable without color.
+
+% Min: no longer used as of ACL 2018, following ACL exec's decision to
+% remove this extra workflow that was not executed much.
+% BEGIN: remove
+%% \section{XML conversion and supported \LaTeX\ packages}
+
+%% Following ACL 2014 we will also we will attempt to automatically convert 
+%% your \LaTeX\ source files to publish papers in machine-readable 
+%% XML with semantic markup in the ACL Anthology, in addition to the 
+%% traditional PDF format.  This will allow us to create, over the next 
+%% few years, a growing corpus of scientific text for our own future research, 
+%% and picks up on recent initiatives on converting ACL papers from earlier 
+%% years to XML. 
+
+%% We encourage you to submit a ZIP file of your \LaTeX\ sources along
+%% with the camera-ready version of your paper. We will then convert them
+%% to XML automatically, using the LaTeXML tool
+%% (\url{http://dlmf.nist.gov/LaTeXML}). LaTeXML has \emph{bindings} for
+%% a number of \LaTeX\ packages, including the ACL 2018 stylefile. These
+%% bindings allow LaTeXML to render the commands from these packages
+%% correctly in XML. For best results, we encourage you to use the
+%% packages that are officially supported by LaTeXML, listed at
+%% \url{http://dlmf.nist.gov/LaTeXML/manual/included.bindings}
+% END: remove
+
+\section{Translation of non-English Terms}
+
+It is also advised to supplement non-English characters and terms
+with appropriate transliterations and/or translations
+since not all readers understand all such characters and terms.
+Inline transliteration or translation can be represented in
+the order of: original-form transliteration ``translation''.
+
+\section{Length of Submission}
+\label{sec:length}
+
+The NAACL-HLT 2019 main conference accepts submissions of long papers and
+short papers.
+ Long papers may consist of up to eight (8) pages of
+content plus unlimited pages for references. Upon acceptance, final
+versions of long papers will be given one additional page -- up to nine (9)
+pages of content plus unlimited pages for references -- so that reviewers' comments
+can be taken into account. Short papers may consist of up to four (4)
+pages of content, plus unlimited pages for references. Upon
+acceptance, short papers will be given five (5) pages in the
+proceedings and unlimited pages for references. 
+For both long and short papers, all illustrations and tables that are part
+of the main text must be accommodated within these page limits, observing
+the formatting instructions given in the present document. Papers that do not conform to the specified length and formatting requirements are subject to be rejected without review.
+
+NAACL-HLT 2019 does encourage the submission of additional material that is relevant to the reviewers but not an integral part of the paper. There are two such types of material: appendices, which can be read, and non-readable supplementary materials, often data or code.  Do not include this additional material in the same document as your main paper. Additional material must be submitted as one or more separate files, and must adhere to the same anonymity guidelines as the main paper. The paper must be self-contained: it is optional for reviewers to look at the supplementary material. Papers should not refer, for further detail, to documents, code or data resources that are not available to the reviewers. Refer to Appendix~\ref{sec:appendix} and Appendix~\ref{sec:supplemental} for further information. 
+
+Workshop chairs may have different rules for allowed length and
+whether supplemental material is welcome. As always, the respective
+call for papers is the authoritative source.
+
+\section{Acknowledgments}
+
+The acknowledgments should go immediately before the references.  Do
+not number the acknowledgments section. Do not include this section
+when submitting your paper for review. \\
+
+\fi
+
+\bibliography{naaclhlt2019}
+\bibliographystyle{acl_natbib}
+
+
+\end{document}
