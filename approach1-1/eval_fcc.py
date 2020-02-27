@@ -4,7 +4,7 @@ from util_model import import_model
 
 def test_lstm():
     # Prepare test dataset
-    trainset = 'data/task-1/test.csv'
+    trainset = 'data/task-1/dev.csv'
 
     # Trainingset
     dataset_train = load_raw_dataset(filename=trainset)

@@ -1,10 +1,11 @@
 from util_dataset import load_raw_dataset, convert_data_to_basic, convert_to_trainingdata
 from util_model import import_model
+import pandas as pd
 
 
 def eval_lstm():
     # Prepare test dataset
-    trainset = 'data/task-1/test.csv'
+    trainset = 'data/task-1/dev.csv'
 
     # Trainingset
     dataset_train = load_raw_dataset(filename=trainset)
@@ -30,8 +31,11 @@ def eval_lstm():
         id = dataset_train[index][0]
         print(id, classname)
 
-        csv_dict["id"].append(index)
+        csv_dict["id"].append(id)
         csv_dict["pred"].append(classname)
+
+    df = pd.DataFrame.from_dict(csv_dict)
+    df.to_csv("results.csv")
 
 
 if __name__ == '__main__':
